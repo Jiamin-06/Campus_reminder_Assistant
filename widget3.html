@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>自动处理节点 · 校园全能提醒</title>
+<style>
+:root {
+  --color-primary: #4A90D9;
+  --color-accent: #FF6B35;
+  --color-danger: #E74C3C;
+  --color-warning: #F39C12;
+  --color-success: #27AE60;
+  --color-bg: #F0F4F8;
+  --color-card: #FFFFFF;
+  --color-text: #2C3E50;
+  --color-text-light: #7F8C8D;
+  --shadow: 0 4px 20px rgba(74, 144, 217, 0.15);
+  --radius: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  padding: 20px;
+}
+.header { text-align: center; padding: 20px 0 16px; }
+.header h1 { font-size: 20px; font-weight: 700; color: var(--color-primary); }
+.header p { font-size: 13px; color: var(--color-text-light); margin-top: 4px; }
+
+/* 自动刷新条 */
+.auto-bar {
+  background: linear-gradient(135deg, var(--color-accent), #FF8F66);
+  color: #fff;
+  padding: 12px 16px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.auto-bar-left { display: flex; align-items: center; gap: 8px; }
+.pulse-dot {
+  width: 10px; height: 10px;
+  background: #fff;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+.countdown-ring {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  border: 3px solid rgba(255,255,255,0.4);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+.btn-sm {
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn-sm:hover { background: rgba(255,255,255,0.35); }
+.btn-sm.active { background: rgba(255,255,255,0.4); }
+
+/* 卡片 */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow);
+}
+.card-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 预警横幅 */
+.banner {
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  animation: slideDown 0.4s ease;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.banner-danger { background: #FDECEC; border-left: 4px solid var(--color-danger); }
+.banner-warning { background: #FEF9E7; border-left: 4px solid var(--color-warning); }
+.banner-icon { font-size: 24px; flex-shrink: 0; }
+.banner-content { flex: 1; }
+.banner-title { font-size: 14px; font-weight: 700; color: var(--color-text); }
+.banner-sub { font-size: 12px; color: var(--color-text-light); margin-top: 2px; }
+.banner-close {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--color-text-light);
+}
+.banner-close:hover { background: rgba(0,0,0,0.06); }
+
+/* 待办中心 */
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px;
+  background: var(--color-bg);
+  border-radius: 12px;
+  margin-bottom: 10px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.todo-item:hover { background: #E8F0FA; }
+.todo-item.done { opacity: 0.5; background: #F8F8F8; }
+.todo-item.done .todo-text { text-decoration: line-through; color: var(--color-text-light); }
+.todo-check {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2px solid #CBD5E1;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+.todo-item:not(.done) .todo-check { border-color: var(--color-primary); background: transparent; }
+.todo-item.done .todo-check { border-color: var(--color-success); background: var(--color-success); color: #fff; }
+.todo-info { flex: 1; min-width: 0; }
+.todo-text { font-size: 14px; font-weight: 600; color: var(--color-text); }
+.todo-meta { font-size: 12px; color: var(--color-text-light); margin-top: 2px; }
+.todo-tag {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.tag-red { background: #FDECEC; color: var(--color-danger); }
+.tag-orange { background: #FEF3E8; color: var(--color-warning); }
+.tag-blue { background: #E8F4FD; color: var(--color-primary); }
+.tag-green { background: #F3F9EC; color: var(--color-success); }
+.tag-purple { background: #F8E8F8; color: #8E44AD; }
+
+/* 推送日志 */
+.log-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #F8FAFC;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.log-toggle-title { font-size: 13px; font-weight: 700; color: var(--color-text); }
+.log-toggle-btn { font-size: 20px; color: var(--color-text-light); transition: transform 0.3s; }
+.log-panel { display: none; }
+.log-panel.open { display: block; }
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  border-bottom: 1px solid #F0F0F0;
+  font-size: 13px;
+  animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.log-time { font-size: 11px; color: var(--color-text-light); flex-shrink: 0; min-width: 50px; }
+.log-content { flex: 1; }
+.log-type { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; margin-right: 4px; }
+.log-type.course { background: #E8F4FD; color: var(--color-primary); }
+.log-type.hw { background: #FEF3E8; color: var(--color-warning); }
+.log-type.exam { background: #FDECEC; color: var(--color-danger); }
+.log-type.express { background: #F3F9EC; color: var(--color-success); }
+.log-type.balance { background: #F8E8F8; color: #8E44AD; }
+.log-empty { text-align: center; padding: 20px; color: var(--color-text-light); font-size: 13px; }
+
+/* 复制区 */
+.copy-bar {
+  background: linear-gradient(135deg, var(--color-primary), #6BA3E0);
+  color: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.copy-bar span { font-size: 13px; font-weight: 600; }
+.copy-btn {
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.4); }
+
+/* 规则列表 */
+.rule-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.rule-item.fired { background: #F3F9EC; border: 1px solid #A9DFBF; }
+.rule-item.idle { background: #F8FAFC; border: 1px solid #E2E8F0; }
+.rule-icon { font-size: 20px; }
+.rule-text { flex: 1; }
+.rule-title { font-weight: 600; color: var(--color-text); }
+.rule-sub { font-size: 11px; color: var(--color-text-light); margin-top: 2px; }
+.rule-status { font-size: 11px; font-weight: 700; }
+.rule-status.on { color: var(--color-success); }
+.rule-status.off { color: #CBD5E1; }
+
+/* 快捷导航 */
+.navi-links { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
+.navi-link {
+  flex: 1; max-width: 200px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--color-bg);
+  background: var(--color-card);
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.navi-link:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.navi-link .navi-icon { font-size: 24px; margin-bottom: 4px; }
+
+/* 数字滚动 */
+.count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  background: var(--color-danger);
+  color: #fff;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0 6px;
+  margin-left: 4px;
+}
+
+/* 格式化输出预览 */
+.output-preview {
+  background: #1E293B;
+  color: #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 2;
+  white-space: pre-wrap;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  max-height: 300px;
+  overflow-y: auto;
+  margin-top: 16px;
+}
+.output-preview .line-title { color: #60A5FA; }
+.output-preview .line-hw { color: #FCD34D; }
+.output-preview .line-exam { color: #F87171; }
+.output-preview .line-express { color: #86EFAC; }
+.output-preview .line-balance { color: #C4B5FD; }
+.output-preview .line-todo { color: #34D399; }
+</style>
+</head>
+<body>
+<header class="header">
+  <h1>⚡ 自动处理节点</h1>
+  <p>6大规则自动运行 · 今日待办智能汇总</p>
+</header>
+
+<!-- 自动刷新状态栏 -->
+<div class="auto-bar">
+  <div class="auto-bar-left">
+    <div class="pulse-dot"></div>
+    <span>⚡ 自动处理运行中</span>
+    <span id="refreshCount" class="count-badge">0</span>
+  </div>
+  <div class="countdown-ring" id="countdownRing">60</div>
+  <button class="btn-sm" id="pauseBtn" onclick="togglePause()">⏸ 暂停</button>
+</div>
+
+<!-- 余额预警横幅 -->
+<div id="bannerArea"></div>
+
+<!-- 今日待办中心 -->
+<div class="card">
+  <div class="card-title">✅ 今日待办中心 <span id="todoCount" class="count-badge" style="background:var(--color-primary)">0</span></div>
+  <div id="todoList"></div>
+  <div id="todoEmpty" style="text-align:center;padding:30px;color:var(--color-text-light);font-size:14px">
+    🎉 所有事项已处理完毕，今日无待办！
+  </div>
+</div>
+
+<!-- 今日提醒 -->
+<div class="card">
+  <div class="card-title">📋 今日提醒</div>
+  <div class="output-preview" id="outputPreview" onclick="copyOutput()"></div>
+  <div class="copy-bar" style="margin-top:12px;margin-bottom:0">
+    <span>📋 一键复制今日提醒</span>
+    <button class="copy-btn" id="copyOutputBtn" onclick="copyOutput()">📋 复制全部</button>
+  </div>
+</div>
+
+<!-- 自动规则状态 -->
+<div class="card">
+  <div class="card-title">🔧 自动规则监控状态</div>
+  <div id="ruleList"></div>
+</div>
+
+<!-- 推送日志 -->
+<div class="card">
+  <div class="log-toggle" onclick="toggleLog()">
+    <div>
+      <div class="log-toggle-title">📊 推送日志</div>
+      <div style="font-size:11px;color:var(--color-text-light);margin-top:2px">共 <span id="logCount">0</span> 条推送记录</div>
+    </div>
+    <div class="log-toggle-btn" id="logToggleBtn">▼</div>
+  </div>
+  <div class="log-panel" id="logPanel">
+    <div id="logList"></div>
+  </div>
+</div>
+
+<!-- 快捷导航 -->
+<div class="navi-links">
+  <div class="navi-link" onclick="location.href='widget1.html'">
+    <div class="navi-icon">📋</div>
+    <div>返回主助手</div>
+  </div>
+  <div class="navi-link" onclick="location.href='widget2.html'">
+    <div class="navi-icon">🤖</div>
+    <div>AI录入节点</div>
+  </div>
+</div>
+
+<script>
+// ========== 数据层：优先从 localStorage 读取用户数据 ==========
+function loadUserData() {
+  try {
+    const saved = localStorage.getItem('campus_assistant_data');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.courses || parsed.homeworks || parsed.exams || parsed.expresses || parsed.balances) {
+        console.log('✅ 已加载用户数据');
+        return parsed;
+      }
+    }
+  } catch(e) {
+    console.warn('localStorage 读取失败，使用演示数据');
+  }
+  return null;
+}
+
+function initDemo() {
+  const today = new Date();
+  const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+  const day3 = new Date(today); day3.setDate(day3.getDate() + 3);
+  const day7 = new Date(today); day7.setDate(day7.getDate() + 7);
+  const day14 = new Date(today); day14.setDate(day14.getDate() + 14);
+  const day21 = new Date(today); day21.setDate(day21.getDate() + 21);
+  const fmt = d => d.toISOString().split('T')[0];
+
+  return {
+    courses: [
+      { name: '高等数学', day: today.getDay() || 7, slot: '第1-2节', room: '教学楼A301' },
+      { name: '大学英语', day: today.getDay() || 7, slot: '第3-4节', room: '外语楼B201' },
+      { name: '线性代数', day: ((today.getDay() + 2 - 1) % 7) + 1, slot: '第5-6节', room: '教学楼C105' },
+      { name: '大学物理', day: ((today.getDay() + 1 - 1) % 7) + 1, slot: '第7-8节', room: '实验楼201' }
+    ],
+    homeworks: [
+      { name: '第三章习题集', course: '高等数学', due: fmt(day3), done: false },
+      { name: '英语阅读报告', course: '大学英语', due: fmt(tomorrow), done: false },
+      { name: '物理实验报告', course: '大学物理', due: fmt(today), done: false },
+      { name: '矩阵证明题', course: '线性代数', due: fmt(day7), done: false },
+      { name: '高数月考模拟题', course: '高等数学', due: fmt(day14), done: false }
+    ],
+    exams: [
+      { name: '大学英语四级', type: 'cet4', date: fmt(day14), room: '教学楼A' },
+      { name: '高等数学期末', type: 'final', date: fmt(day21), room: '' },
+      { name: '教师资格证笔试', type: 'teacher', date: fmt(day14), room: '' }
+    ],
+    expresses: [
+      { no: 'SF1234567890', type: '顺丰', date: fmt(today), loc: '菜鸟驿站3号门', arrived: false },
+      { no: 'JD9876543210', type: '京东', date: fmt(day3), loc: '京东派', arrived: false }
+    ],
+    balances: [
+      { type: '校园卡', amount: 8.5, threshold: 10 },
+      { type: '电费', amount: 25, threshold: 20 },
+      { type: '水费', amount: 45, threshold: 10 }
+    ]
+  };
+}
+
+let data = {};
+let todoDone = [];
+let pushLog = [];
+let refreshSeconds = 60;
+let timerInterval = null;
+let isPaused = false;
+let refreshCount = 0;
+let isUsingUserData = false;
+
+function togglePause() {
+  isPaused = !isPaused;
+  document.getElementById('pauseBtn').textContent = isPaused ? '▶ 继续' : '⏸ 暂停';
+}
+
+// ========== 工具函数 ==========
+function diffDays(dateStr) {
+  if (!dateStr) return 999;
+  const target = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil((target - today) / 86400000);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function timeStr() {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+}
+
+// ========== 推送日志 ==========
+function pushLogEntry(type, text) {
+  pushLog.unshift({ time: timeStr(), type, text, ts: Date.now() });
+  if (pushLog.length > 50) pushLog.pop();
+  renderLog();
+  refreshOutputPreview();
+}
+
+function renderLog() {
+  document.getElementById('logCount').textContent = pushLog.length;
+  const list = document.getElementById('logList');
+  if (pushLog.length === 0) {
+    list.innerHTML = '<div class="log-empty">暂无推送记录，条件触发后自动显示</div>';
+    return;
+  }
+  list.innerHTML = pushLog.map(l => `
+    <div class="log-entry">
+      <div class="log-time">${l.time}</div>
+      <div class="log-content">
+        <span class="log-type ${l.type}">${l.type.toUpperCase()}</span>
+        ${l.text}
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleLog() {
+  const panel = document.getElementById('logPanel');
+  const btn = document.getElementById('logToggleBtn');
+  panel.classList.toggle('open');
+  btn.style.transform = panel.classList.contains('open') ? 'rotate(180deg)' : '';
+}
+
+// ========== 渲染待办列表 ==========
+function renderTodoList() {
+  const list = document.getElementById('todoList');
+  const empty = document.getElementById('todoEmpty');
+  const today = new Date();
+  const todayNum = today.getDay() || 7;
+  const nowHour = today.getHours();
+
+  // 确保 data 存在
+  const courses = data.courses || [];
+  const homeworks = data.homeworks || [];
+  const exams = data.exams || [];
+  const expresses = data.expresses || [];
+  const balances = data.balances || [];
+
+  const items = [];
+
+  // 规则1: 课程提醒（1小时内）
+  const slotMap = {
+    '第1-2节': { start: 8, end: 10 },
+    '第3-4节': { start: 10, end: 12 },
+    '第5-6节': { start: 14, end: 16 },
+    '第7-8节': { start: 16, end: 18 },
+    '第9-10节(晚)': { start: 19, end: 21 }
+  };
+  
+  courses.filter(c => c.day === todayNum).forEach(c => {
+    const slot = slotMap[c.slot] || { start: 8, end: 10 };
+    const within1h = nowHour >= slot.start - 1 && nowHour < slot.end;
+    if (within1h) {
+      items.push({
+        id: `course-${c.name}`,
+        text: `📚 ${c.name}（${c.slot}）`,
+        meta: `${c.room || '待定地点'} · 即将上课`,
+        tag: 'tag-blue',
+        tagText: '⚡ 课前1小时',
+        type: 'course'
+      });
+      pushLogEntry('course', `课程提醒：${c.name}将在${c.slot}上课，地点${c.room || '待定'}`);
+    } else {
+      // 显示今日所有课程
+      items.push({
+        id: `course-${c.name}`,
+        text: `📚 ${c.name}（${c.slot}）`,
+        meta: `${c.room || '待定地点'}`,
+        tag: 'tag-blue',
+        tagText: '📅 今日课程',
+        type: 'course'
+      });
+    }
+  });
+
+  // 规则2: 作业提醒（仅限今日截止）
+  homeworks.filter(h => !h.done).forEach(h => {
+    const days = diffDays(h.due);
+    if (days < 0) {
+      // 已截止但未完成
+      items.push({ id: `hw-${h.name}`, text: `📝 ${h.name}（${h.course||'待识别'}）`, meta: `${formatDate(h.due)}已截止`, tag: 'tag-red', tagText: '⚠️ 已截止', type: 'hw' });
+      pushLogEntry('hw', `作业已截止：${h.name}（${h.course||'待识别'}）`);
+    } else if (days === 0) {
+      // 今日截止
+      items.push({ id: `hw-${h.name}`, text: `📝 ${h.name}（${h.course||'待识别'}）`, meta: '今天截止！', tag: 'tag-red', tagText: '🔴 今天截止', type: 'hw' });
+      pushLogEntry('hw', `紧急：${h.name}（${h.course||'待识别'}）今天截止！`);
+    }
+    // 不再显示明天及以后的作业
+  });
+
+  // 规则3: 考试提醒（仅限今日）
+  exams.forEach(e => {
+    const days = diffDays(e.date);
+    if (days === 0) {
+      // 今日考试
+      items.push({ id: `exam-${e.name}`, text: `📖 ${e.name}`, meta: `今天开考${e.room?' · '+e.room:''}`, tag: 'tag-red', tagText: '🔴 今日考试', type: 'exam' });
+      pushLogEntry('exam', `今日考试：${e.name}！`);
+    } else if (days < 0) {
+      // 已过期的考试
+      items.push({ id: `exam-${e.name}`, text: `📖 ${e.name}`, meta: `${formatDate(e.date)}已结束`, tag: 'tag-orange', tagText: '⚠️ 已结束', type: 'exam' });
+    }
+  });
+
+  // 规则4: 快递提醒（仅限今日到站）
+  expresses.forEach(ex => {
+    const days = diffDays(ex.date);
+    if (days === 0) {
+      // 今日到站
+      items.push({ id: `ex-${ex.no}`, text: `📦 ${ex.type||'快递'} ${ex.no||''}`, meta: `今天到站 · ${ex.loc || '菜鸟驿站'}`, tag: 'tag-red', tagText: '🔴 今日到站', type: 'express' });
+      if (!ex.arrived) {
+        pushLogEntry('express', `快递今日到站：${ex.type||'快递'} ${ex.no||''}，地点${ex.loc || '菜鸟驿站'}`);
+        ex.arrived = true;
+      }
+    } else if (days < 0) {
+      // 已过期未取
+      items.push({ id: `ex-${ex.no}`, text: `📦 ${ex.type||'快递'} ${ex.no||''}`, meta: `${formatDate(ex.date)}到站 · ${ex.loc || '菜鸟驿站'}`, tag: 'tag-orange', tagText: '⚠️ 未取', type: 'express' });
+      if (!ex.arrived) {
+        pushLogEntry('express', `快递滞留提醒：${ex.type||'快递'} ${ex.no||''}，请尽快取件`);
+        ex.arrived = true;
+      }
+    }
+  });
+
+  // 规则5: 余额预警
+  balances.forEach(b => {
+    if (b.amount <= b.threshold) {
+      items.push({ id: `bal-${b.type}`, text: `💰 ${b.type}余额不足`, meta: `当前¥${b.amount} · 低于¥${b.threshold}预警线`, tag: 'tag-red', tagText: '⚠️ 需要充值', type: 'balance' });
+    }
+  });
+
+  document.getElementById('todoCount').textContent = items.length;
+  if (items.length === 0) {
+    list.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    list.innerHTML = items.map(item => `
+      <div class="todo-item ${todoDone.includes(item.id) ? 'done' : ''}" onclick="markDone('${item.id}')">
+        <div class="todo-check">${todoDone.includes(item.id) ? '✓' : ''}</div>
+        <div class="todo-info">
+          <div class="todo-text">${item.text}</div>
+          <div class="todo-meta">${item.meta}</div>
+        </div>
+        <div class="todo-tag ${item.tag}">${item.tagText}</div>
+      </div>
+    `).join('');
+  }
+}
+
+function markDone(id) {
+  if (todoDone.includes(id)) {
+    todoDone = todoDone.filter(d => d !== id);
+  } else {
+    todoDone.push(id);
+    pushLogEntry('done', `已完成待办：${id.split('-')[1]}`);
+  }
+  renderTodoList();
+  refreshOutputPreview();
+}
+
+function fmt2(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ========== 渲染规则状态 ==========
+function renderRules() {
+  const today = new Date().getDay() || 7;
+  const nowHour = new Date().getHours();
+  
+  const courses = data.courses || [];
+  const homeworks = data.homeworks || [];
+  const exams = data.exams || [];
+  const expresses = data.expresses || [];
+  const balances = data.balances || [];
+  
+  const todayCourses = courses.filter(c => c.day === today);
+  const urgentHw = homeworks.filter(h => diffDays(h.due) >= 0 && diffDays(h.due) <= 3 && !h.done);
+  const urgentExams = exams.filter(e => diffDays(e.date) >= 0 && diffDays(e.date) <= 7);
+  const readyExpress = expresses.filter(ex => diffDays(ex.date) <= 0);
+  const lowBalance = balances.filter(b => b.amount <= b.threshold);
+
+  const rules = [
+    { icon: '📚', title: '课程表提醒', sub: `今日${todayCourses.length}节课，课前1小时推送`, fired: todayCourses.length > 0 },
+    { icon: '📝', title: '作业三级预警', sub: `3天内${urgentHw.length}项紧急作业`, fired: urgentHw.length > 0 },
+    { icon: '📖', title: '考试倒计时', sub: `7天内${urgentExams.length}场考试`, fired: urgentExams.length > 0 },
+    { icon: '📦', title: '快递到站提醒', sub: `可取件${readyExpress.length}件`, fired: readyExpress.length > 0 },
+    { icon: '💰', title: '余额不足预警', sub: `${lowBalance.length}个账户余额低于预警线`, fired: lowBalance.length > 0 },
+    { icon: '⚡', title: '60秒自动刷新', sub: '每分钟自动更新待办清单和推送日志', fired: true }
+  ];
+
+  document.getElementById('ruleList').innerHTML = rules.map(r => `
+    <div class="rule-item ${r.fired ? 'fired' : 'idle'}">
+      <div class="rule-icon">${r.icon}</div>
+      <div class="rule-text">
+        <div class="rule-title">${r.title}</div>
+        <div class="rule-sub">${r.sub}</div>
+      </div>
+      <div class="rule-status ${r.fired ? 'on' : 'off'}">${r.fired ? '✓ 运行中' : '○ 待机'}</div>
+    </div>
+  `).join('');
+}
+
+// ========== 余额预警横幅 ==========
+function renderBanner() {
+  const area = document.getElementById('bannerArea');
+  const balances = data.balances || [];
+  const lowBalance = balances.filter(b => b.amount <= b.threshold);
+  if (lowBalance.length === 0) {
+    area.innerHTML = '';
+    return;
+  }
+  area.innerHTML = lowBalance.map(b => `
+    <div class="banner banner-danger" id="banner-${b.type}">
+      <div class="banner-icon">💰</div>
+      <div class="banner-content">
+        <div class="banner-title">⚠️ ${b.type}余额不足！</div>
+        <div class="banner-sub">当前余额 ¥${b.amount} · 低于预警线 ¥${b.threshold}</div>
+      </div>
+      <button class="banner-close" onclick="document.getElementById('banner-${b.type}').style.display='none'">×</button>
+    </div>
+  `).join('');
+  lowBalance.forEach(b => pushLogEntry('balance', `余额预警：${b.type}余额¥${b.amount}，低于¥${b.threshold}预警线`));
+}
+
+// ========== 固定格式输出预览 ==========
+function refreshOutputPreview() {
+  const el = document.getElementById('outputPreview');
+  const output = buildFixedOutput();
+  el.innerHTML = colorize(output);
+}
+
+function buildFixedOutput() {
+  const today = new Date();
+  const todayNum = today.getDay() || 7;
+  const dayNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  const nowHour = today.getHours();
+  
+  // 确保 data 存在且有数组属性
+  const courses = data.courses || [];
+  const homeworks = data.homeworks || [];
+  const exams = data.exams || [];
+  const expresses = data.expresses || [];
+  const balances = data.balances || [];
+
+  const todayCourses = courses.filter(c => c.day === todayNum);
+  const urgentHw = homeworks.filter(h => diffDays(h.due) >= 0 && !h.done).sort((a,b) => diffDays(a.due) - diffDays(b.due));
+  const urgentExams = exams.filter(e => diffDays(e.date) >= 0).sort((a,b) => diffDays(a.date) - diffDays(b.date));
+  const readyExpress = expresses.filter(ex => diffDays(ex.date) <= 0);
+  const upcomingExpress = expresses.filter(ex => diffDays(ex.date) > 0).sort((a,b) => diffDays(a.date) - diffDays(b.date));
+  const lowBalance = balances.filter(b => b.amount <= b.threshold);
+
+  // 📅 今日课表
+  let courseInfo = '今日无课';
+  if (todayCourses.length > 0) {
+    const slotMap = {
+      '第1-2节': '08:00-09:40', '第3-4节': '10:00-11:40',
+      '第5-6节': '14:00-15:40', '第7-8节': '16:00-17:40', '第9-10节(晚)': '19:00-20:40'
+    };
+    courseInfo = todayCourses.map(c => `${c.name}(${slotMap[c.slot]||c.slot})${c.room?' '+c.room:''}`).join('、');
+  }
+
+  // 📝 作业倒计时
+  let hwInfo = '暂无待完成作业';
+  if (urgentHw.length > 0) {
+    hwInfo = urgentHw.slice(0, 5).map(h => {
+      const days = diffDays(h.due);
+      const tag = days <= 0 ? '⚠️已到期' : days === 1 ? '🔴明天截止' : days <= 3 ? `🟡${days}天后` : `🟢${days}天后`;
+      return `${h.name}（${h.course||'待识别'}）${tag}`;
+    }).join('；');
+  }
+
+  // 📚 考试倒计时
+  let examInfo = '暂无近期考试';
+  if (urgentExams.length > 0) {
+    examInfo = urgentExams.slice(0, 3).map(e => `${e.name}倒计时${diffDays(e.date)}天`).join('；');
+  }
+
+  // 📦 快递提醒
+  let expressInfo = '暂无待取快递';
+  if (readyExpress.length > 0) {
+    expressInfo = readyExpress.map(ex => `${ex.type||'快递'}(${ex.no||''})在${ex.loc||'菜鸟驿站'}可取`).join('；');
+  } else if (upcomingExpress.length > 0) {
+    const next = upcomingExpress[0];
+    expressInfo = `${next.type||'快递'}(${next.no||''})预计${diffDays(next.date)}天后到达`;
+  }
+
+  // 💰 余额预警
+  let balanceInfo = '余额充足，无预警';
+  if (balances.length > 0) {
+    if (lowBalance.length > 0) {
+      balanceInfo = lowBalance.map(b => `⚠️${b.type}余额¥${b.amount}（低于¥${b.threshold}预警线）`).join('；');
+    } else {
+      const all = balances.map(b => `${b.type}¥${b.amount}`).join('、');
+      balanceInfo = `当前余额：${all}，均高于预警线`;
+    }
+  }
+
+  // ✅ 今日待办汇总
+  const todos = [];
+  if (todayCourses.length > 0) {
+    todayCourses.forEach(c => todos.push(`📚 ${c.name}（${c.slot}）`));
+  }
+  const todayHw = urgentHw.filter(h => diffDays(h.due) <= 0);
+  if (todayHw.length > 0) {
+    todos.push(`⚠️ ${todayHw.length}项作业${diffDays(todayHw[0].due) <= 0 ? '今日' : '紧急'}截止`);
+  }
+  if (readyExpress.length > 0) {
+    todos.push(`📦 ${readyExpress.length}件快递可取`);
+  }
+  if (lowBalance.length > 0) {
+    todos.push(`💰 ${lowBalance.length}个账户余额不足`);
+  }
+  const todoDoneItems = todoDone.filter(id => id.startsWith('done-'));
+  if (todoDoneItems.length > 0) {
+    todos.push(`✅ 已完成${todoDoneItems.length}项`);
+  }
+  const todoInfo = todos.length > 0 ? todos.join('、') : '🎉 今日事项已全部完成，继续加油！';
+
+  return `【校园全能提醒小助手】
+📅 今日课表：${courseInfo}
+📝 作业倒计时：${hwInfo}
+📚 考试倒计时：${examInfo}
+📦 快递提醒：${expressInfo}
+💰 余额预警：${balanceInfo}
+✅ 今日待办：${todoInfo}`;
+}
+
+function colorize(text) {
+  return text
+    .replace(/^(【.*?】)$/gm, '<span class="line-title">$1</span>')
+    .replace(/^(📅 今日课表：.*)$/gm, '<span class="line-title">$1</span>')
+    .replace(/^(📝 作业倒计时：.*)$/gm, '<span class="line-hw">$1</span>')
+    .replace(/^(📚 考试倒计时：.*)$/gm, '<span class="line-exam">$1</span>')
+    .replace(/^(📦 快递提醒：.*)$/gm, '<span class="line-express">$1</span>')
+    .replace(/^(💰 余额预警：.*)$/gm, '<span class="line-balance">$1</span>')
+    .replace(/^(✅ 今日待办：.*)$/gm, '<span class="line-todo">$1</span>');
+}
+
+function copyOutput() {
+  const text = buildFixedOutput();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyOutputBtn');
+    btn.textContent = '✅ 已复制！';
+    setTimeout(() => { btn.textContent = '📋 复制全部'; }, 2000);
+  });
+}
+
+// ========== 60秒自动刷新循环 ==========
+function run() {
+  if (isPaused) return;
+  refreshCount++;
+  document.getElementById('refreshCount').textContent = refreshCount;
+  refreshSeconds = 60;
+  renderTodoList();
+  renderRules();
+  renderBanner();
+  refreshOutputPreview();
+}
+
+function updateCountdown() {
+  if (isPaused) return;
+  refreshSeconds--;
+  const ring = document.getElementById('countdownRing');
+  ring.textContent = refreshSeconds;
+  ring.style.borderColor = refreshSeconds <= 10 ? 'rgba(231,76,60,0.8)' : 'rgba(255,255,255,0.4)';
+  if (refreshSeconds <= 0) run();
+}
+
+function startLoop() {
+  run();
+  timerInterval = setInterval(updateCountdown, 1000);
+}
+
+// ========== 启动 ==========
+function startup() {
+  // 优先从 localStorage 读取用户在 Widget1/Widget2 输入的数据
+  const userData = loadUserData();
+  if (userData) {
+    data = userData;
+    isUsingUserData = true;
+    document.querySelector('.header p').textContent = '📥 已加载用户数据 · 6大规则自动运行中';
+  } else {
+    data = initDemo();
+    isUsingUserData = false;
+    document.querySelector('.header p').textContent = '📝 演示数据模式 · 请到主助手录入真实数据';
+  }
+  renderLog();
+  startLoop();
+}
+startup();
+
+// 每30秒检查一次 localStorage 更新（保持与 Widget1/Widget2 同步）
+setInterval(() => {
+  if (!isPaused) {
+    const userData = loadUserData();
+    if (userData && !isUsingUserData) {
+      // 检测到新数据，提示用户
+      data = userData;
+      isUsingUserData = true;
+      document.querySelector('.header p').textContent = '📥 已加载用户数据 · 6大规则自动运行中';
+      run();
+    } else if (userData && isUsingUserData) {
+      // 同步最新数据
+      data = userData;
+      run();
+    }
+  }
+}, 30000);
+</script>
+</body>
+</html>

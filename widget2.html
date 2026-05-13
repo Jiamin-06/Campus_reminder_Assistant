@@ -1,0 +1,1124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 录入节点 · 校园全能提醒</title>
+<style>
+:root {
+  --color-primary: #4A90D9;
+  --color-accent: #FF6B35;
+  --color-danger: #E74C3C;
+  --color-warning: #F39C12;
+  --color-success: #27AE60;
+  --color-bg: #F0F4F8;
+  --color-card: #FFFFFF;
+  --color-text: #2C3E50;
+  --color-text-light: #7F8C8D;
+  --shadow: 0 4px 20px rgba(74, 144, 217, 0.15);
+  --radius: 16px;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  min-height: 100vh;
+  padding: 20px;
+}
+.header { text-align: center; padding: 20px 0 16px; }
+.header h1 { font-size: 20px; font-weight: 700; color: var(--color-primary); }
+.header p { font-size: 13px; color: var(--color-text-light); margin-top: 4px; }
+
+/* 进度条 */
+.progress-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin-bottom: 28px;
+  padding: 0 20px;
+}
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex: 1;
+}
+.progress-step::before {
+  content: '';
+  position: absolute;
+  top: 18px;
+  left: 50%;
+  right: -50%;
+  height: 3px;
+  background: #E2E8F0;
+  z-index: 0;
+}
+.progress-step:last-child::before { display: none; }
+.progress-step.done::before { background: var(--color-primary); }
+.step-num {
+  width: 36px; height: 36px;
+  border-radius: 50%;
+  background: #E2E8F0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1;
+  transition: all 0.3s;
+}
+.progress-step.done .step-num { background: var(--color-primary); }
+.progress-step.active .step-num {
+  background: var(--color-accent);
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(255,107,53,0.2);
+}
+.step-label {
+  font-size: 11px;
+  color: var(--color-text-light);
+  margin-top: 6px;
+  text-align: center;
+  font-weight: 600;
+}
+.progress-step.active .step-label { color: var(--color-accent); }
+.progress-step.done .step-label { color: var(--color-primary); }
+
+/* 卡片 */
+.card {
+  background: var(--color-card);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  max-width: 640px;
+  margin: 0 auto 16px;
+}
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+}
+.card-desc {
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin-bottom: 18px;
+  line-height: 1.6;
+}
+textarea {
+  width: 100%;
+  min-height: 120px;
+  padding: 14px;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.2s;
+  background: #FAFBFC;
+  line-height: 1.8;
+}
+textarea:focus { outline: none; border-color: var(--color-primary); }
+textarea::placeholder { color: #B0BEC5; }
+
+.btn-row { display: flex; gap: 10px; margin-top: 16px; }
+.btn {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.btn-primary { background: var(--color-primary); color: #fff; }
+.btn-primary:hover { background: #3A7BC8; }
+.btn-accent { background: var(--color-accent); color: #fff; }
+.btn-accent:hover { background: #E55A25; }
+.btn-secondary { background: var(--color-bg); color: var(--color-text); }
+.btn-secondary:hover { background: #E2E8F0; }
+
+/* 解析结果 */
+.parse-result {
+  margin-top: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.parse-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-bottom: 1px solid #F0F0F0;
+  font-size: 14px;
+  animation: fadeSlideIn 0.3s ease;
+}
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.parse-item:last-child { border-bottom: none; }
+.parse-icon { font-size: 18px; flex-shrink: 0; }
+.parse-content { flex: 1; }
+.parse-title { font-weight: 600; }
+.parse-meta { font-size: 12px; color: var(--color-text-light); margin-top: 2px; }
+.parse-status {
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.parse-status.ok { background: #F3F9EC; color: var(--color-success); }
+.parse-status.skip { background: #F0F0F0; color: var(--color-text-light); }
+.parse-status.warn { background: #FEF3E8; color: var(--color-warning); }
+
+/* 汇总预览 */
+.summary-box {
+  background: #FAFBFC;
+  border: 2px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+.summary-section {
+  margin-bottom: 16px;
+}
+.summary-section:last-child { margin-bottom: 0; }
+.summary-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.summary-item {
+  font-size: 13px;
+  padding: 6px 10px;
+  background: var(--color-card);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  border-left: 3px solid var(--color-primary);
+  color: var(--color-text);
+}
+.summary-item.warning {
+  border-left-color: var(--color-warning);
+  background: #FEF3E8;
+}
+.summary-item.danger { border-left-color: var(--color-danger); background: #FDECEC; }
+
+/* 复制按钮 */
+.copy-bar {
+  background: linear-gradient(135deg, var(--color-primary), #6BA3E0);
+  color: #fff;
+  padding: 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+}
+.copy-bar span { font-size: 13px; font-weight: 600; }
+.copy-btn {
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.25);
+  border: 2px solid rgba(255,255,255,0.5);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.copy-btn:hover { background: rgba(255,255,255,0.4); }
+
+/* 完成页面 */
+.complete-page { text-align: center; padding: 40px 20px; }
+.complete-icon { font-size: 64px; margin-bottom: 16px; animation: bounce 0.6s ease; }
+@keyframes bounce {
+  0% { transform: scale(0); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+.complete-title { font-size: 22px; font-weight: 800; color: var(--color-success); margin-bottom: 8px; }
+.complete-sub { font-size: 14px; color: var(--color-text-light); margin-bottom: 24px; }
+
+/* 小贴士 */
+.tip-box {
+  background: #FFF9E6;
+  border: 1px solid #F39C12;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #856404;
+  margin-top: 12px;
+  line-height: 1.6;
+}
+.tip-box strong { color: #856404; }
+
+/* 快捷导航 */
+.navi-links {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+.navi-link {
+  flex: 1;
+  max-width: 200px;
+  padding: 12px;
+  border-radius: 12px;
+  border: 2px solid var(--color-bg);
+  background: var(--color-card);
+  text-align: center;
+  text-decoration: none;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.navi-link:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.navi-link .navi-icon { font-size: 24px; margin-bottom: 4px; }
+
+/* 步骤指示器 */
+.step-indicator {
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-light);
+  margin-bottom: 16px;
+}
+.step-indicator strong { color: var(--color-accent); }
+
+/* 图片识别区域 */
+.img-upload-area {
+  border: 2px dashed #CBD5E1;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  margin-bottom: 16px;
+  transition: all 0.3s;
+  cursor: pointer;
+}
+.img-upload-area:hover { border-color: var(--color-primary); background: #F8FAFF; }
+.img-upload-area.dragover { border-color: var(--color-primary); background: #E8F4FD; }
+.img-upload-icon { font-size: 40px; margin-bottom: 8px; }
+.img-upload-text { font-size: 14px; color: var(--color-text); font-weight: 600; }
+.img-upload-sub { font-size: 12px; color: var(--color-text-light); margin-top: 4px; }
+.img-preview-container { margin-bottom: 16px; display: none; }
+.img-preview {
+  max-width: 100%;
+  max-height: 250px;
+  border-radius: 12px;
+  display: block;
+  margin: 0 auto;
+}
+.img-preview-actions { display: flex; gap: 8px; justify-content: center; margin-top: 10px; }
+.img-ocr-btn {
+  padding: 8px 16px;
+  background: var(--color-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.img-ocr-btn:hover { background: #3A7BC8; }
+.img-ocr-btn:disabled { background: #CBD5E1; cursor: not-allowed; }
+.img-clear-btn {
+  padding: 8px 16px;
+  background: #F0F0F0;
+  color: var(--color-text);
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.img-clear-btn:hover { background: #E0E0E0; }
+.ocr-result-box {
+  background: #FAFBFC;
+  border: 2px solid var(--color-success);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 12px;
+  display: none;
+}
+.ocr-result-title { font-size: 13px; font-weight: 700; color: var(--color-success); margin-bottom: 8px; }
+.ocr-result-content {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 13px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.ocr-loading {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+.ocr-spinner {
+  width: 20px; height: 20px;
+  border: 3px solid #E2E8F0;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header class="header">
+  <h1>🤖 AI 录入节点</h1>
+  <p>粘贴文字 → 智能解析 → 自动生成清单</p>
+</header>
+
+<!-- 6步进度条 -->
+<div class="progress-bar" id="progressBar">
+  <div class="progress-step active" id="step1">
+    <div class="step-num">1</div>
+    <div class="step-label">课程表</div>
+  </div>
+  <div class="progress-step" id="step2">
+    <div class="step-num">2</div>
+    <div class="step-label">作业</div>
+  </div>
+  <div class="progress-step" id="step3">
+    <div class="step-num">3</div>
+    <div class="step-label">考试</div>
+  </div>
+  <div class="progress-step" id="step4">
+    <div class="step-num">4</div>
+    <div class="step-label">快递</div>
+  </div>
+  <div class="progress-step" id="step5">
+    <div class="step-num">5</div>
+    <div class="step-label">余额</div>
+  </div>
+  <div class="progress-step" id="step6">
+    <div class="step-num">6</div>
+    <div class="step-label">汇总</div>
+  </div>
+</div>
+
+<!-- 步骤1：课程表 -->
+<div class="card" id="stepCard1">
+  <div class="card-title">📚 第1步：导入本周课程表</div>
+  <div class="card-desc">方式一：上传课表图片，AI自动识别 | 方式二：直接粘贴文字</div>
+
+  <!-- 图片上传区域 -->
+  <div class="img-upload-area" id="imgUploadArea" onclick="document.getElementById('imgFileInput').click()">
+    <div class="img-upload-icon">📷</div>
+    <div class="img-upload-text">点击上传课表图片</div>
+    <div class="img-upload-sub">支持 JPG/PNG/GIF，截图或拍照皆可</div>
+  </div>
+  <input type="file" id="imgFileInput" accept="image/*" style="display:none" onchange="handleImgSelect(this)">
+
+  <!-- 图片预览 -->
+  <div class="img-preview-container" id="imgPreviewContainer">
+    <img class="img-preview" id="imgPreview" alt="课表预览">
+    <div class="img-preview-actions">
+      <button class="img-ocr-btn" id="ocrBtn" onclick="startOCR()">
+        🤖 AI 识别课程
+      </button>
+      <button class="img-clear-btn" onclick="clearImg()">✕ 清除</button>
+    </div>
+  </div>
+
+  <!-- OCR加载中 -->
+  <div class="ocr-loading" id="ocrLoading">
+    <div class="ocr-spinner"></div>
+    <span>AI 正在识别课表...</span>
+  </div>
+
+  <!-- OCR识别结果 -->
+  <div class="ocr-result-box" id="ocrResultBox">
+    <div class="ocr-result-title">✅ 识别结果（已自动填入）</div>
+    <div class="ocr-result-content" id="ocrResultContent"></div>
+  </div>
+
+  <!-- 分隔线 -->
+  <div style="text-align:center;margin:20px 0;color:var(--color-text-light);font-size:12px">
+    — 或者手动输入 —
+  </div>
+
+  <!-- 文字输入 -->
+  <textarea id="input1" placeholder="示例：
+周一 高数 1-2节 教学楼A301
+周三 大学英语 3-4节 外语楼B201
+周五 线性代数 5-6节 教学楼C105"></textarea>
+  <div class="tip-box">💡 <strong>提示：</strong>支持多种格式，如"周一 高数A301"、"星期三 体育课 第3-4节"，自动识别！</div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipStep(1)">跳过</button>
+    <button class="btn btn-accent" onclick="parseStep1()">🤖 解析文字</button>
+  </div>
+  <div class="parse-result" id="result1"></div>
+</div>
+
+<!-- 步骤2：作业 -->
+<div class="card" id="stepCard2" style="display:none">
+  <div class="card-title">📝 第2步：输入近期作业</div>
+  <div class="card-desc">输入各科作业名称和截止日期，支持自然语言日期表达</div>
+  <textarea id="input2" placeholder="示例：
+高数第三章习题 截止5月20日
+英语阅读报告 5月18日
+线性代数证明题 明天
+计算机实验报告 后天"></textarea>
+  <div class="tip-box">💡 <strong>提示：</strong>支持"明天"、"后天"、"5月20日"、"2026-05-20"等多种日期格式</div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipStep(2)">跳过</button>
+    <button class="btn btn-accent" onclick="parseStep2()">🤖 AI 解析</button>
+  </div>
+  <div class="parse-result" id="result2"></div>
+</div>
+
+<!-- 步骤3：考试 -->
+<div class="card" id="stepCard3" style="display:none">
+  <div class="card-title">📖 第3步：输入近期考试/考证</div>
+  <div class="card-desc">输入考试名称和时间，自动识别考试类型并计算倒计时</div>
+  <textarea id="input3" placeholder="示例：
+大学英语四级 6月15日
+高数期末考试 6月20日
+教师资格证 10月25日
+考研初试 12月21日"></textarea>
+  <div class="tip-box">💡 <strong>提示：</strong>自动识别：四级/六级→CET4/CET6，期末→期末考试，考研→考研，教资→教资</div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipStep(3)">跳过</button>
+    <button class="btn btn-accent" onclick="parseStep3()">🤖 AI 解析</button>
+  </div>
+  <div class="parse-result" id="result3"></div>
+</div>
+
+<!-- 步骤4：快递 -->
+<div class="card" id="stepCard4" style="display:none">
+  <div class="card-title">📦 第4步：输入快递信息（可选）</div>
+  <div class="card-desc">输入快递单号或快递类型，自动识别并跟踪取件时间</div>
+  <textarea id="input4" placeholder="示例：
+SF1234567890 顺丰
+JD9876543210 京东
+YT9876543333 圆通
+菜鸟驿站 YTO55667788"></textarea>
+  <div class="tip-box">💡 <strong>提示：</strong>支持顺丰、京东、菜鸟、圆通、邮政等主流快递，支持单号自动解析</div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipStep(4)">跳过</button>
+    <button class="btn btn-accent" onclick="parseStep4()">🤖 AI 解析</button>
+  </div>
+  <div class="parse-result" id="result4"></div>
+</div>
+
+<!-- 步骤5：余额 -->
+<div class="card" id="stepCard5" style="display:none">
+  <div class="card-title">💰 第5步：设置余额预警（可选）</div>
+  <div class="card-desc">设置校园卡/电费等账户的预警阈值，低于此值将自动提醒</div>
+  <textarea id="input5" placeholder="示例：
+校园卡 余额50元 低于10元提醒
+电费 余额30元 低于20元提醒
+水费 余额15元 低于5元提醒"></textarea>
+  <div class="tip-box">💡 <strong>提示：</strong>支持格式："类型 余额X元 低于Y元提醒"，不填则使用默认值</div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="skipStep(5)">跳过</button>
+    <button class="btn btn-accent" onclick="parseStep5()">🤖 AI 解析</button>
+  </div>
+  <div class="parse-result" id="result5"></div>
+</div>
+
+<!-- 步骤6：汇总 -->
+<div class="card" id="stepCard6" style="display:none">
+  <div class="card-title">✅ 第6步：确认并生成汇总</div>
+  <div class="card-desc">检查解析结果，确认无误后一键复制或跳转至自动处理节点</div>
+  <div class="summary-box" id="summaryBox"></div>
+  <div class="copy-bar">
+    <span>📋 一键复制今日全部提醒（固定格式）</span>
+    <button class="copy-btn" onclick="copySummary()">📋 复制</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn btn-secondary" onclick="location.href='widget1.html'">← 返回主助手</button>
+    <button class="btn btn-accent" onclick="location.href='widget3.html'">⚡ 进入自动处理节点</button>
+  </div>
+</div>
+
+<!-- 完成页面 -->
+<div id="completePage" style="display:none">
+  <div class="complete-page">
+    <div class="complete-icon">🎉</div>
+    <div class="complete-title">数据录入完成！</div>
+    <div class="complete-sub">6类校园数据已全部解析，可一键复制或跳转到主助手查看</div>
+    <div class="btn-row" style="max-width:400px;margin:0 auto">
+      <button class="btn btn-secondary" onclick="location.href='widget1.html'">📋 查看主助手</button>
+      <button class="btn btn-accent" onclick="location.href='widget3.html'">⚡ 自动处理节点</button>
+    </div>
+  </div>
+</div>
+
+<div class="navi-links">
+  <div class="navi-link" onclick="location.href='widget1.html'">
+    <div class="navi-icon">📋</div>
+    <div>返回主助手</div>
+  </div>
+  <div class="navi-link" onclick="location.href='widget3.html'">
+    <div class="navi-icon">⚡</div>
+    <div>自动处理节点</div>
+  </div>
+</div>
+
+<script>
+// ========== 全局解析结果 ==========
+const parsed = {
+  courses: [],
+  homeworks: [],
+  exams: [],
+  expresses: [],
+  balances: []
+};
+
+let currentStep = 1;
+
+// ========== 工具函数 ==========
+function normalizeDate(s) {
+  if (!s) return null;
+  s = s.trim();
+  const today = new Date();
+  // 今天/明天/后天
+  if (/^明天|后天|今天/.test(s)) {
+    const add = { '今天': 0, '明天': 1, '后天': 2 }[/今天|明天|后天/.exec(s)[0]];
+    const d = new Date(today); d.setDate(d.getDate() + add);
+    return d.toISOString().split('T')[0];
+  }
+  // 相对日期 "3天后"、"2天后"
+  const relMatch = s.match(/(\d+)天后?/);
+  if (relMatch) {
+    const d = new Date(today); d.setDate(d.getDate() + parseInt(relMatch[1]));
+    return d.toISOString().split('T')[0];
+  }
+  // YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.substring(0, 10);
+  // MM月DD日 或 X月XX日
+  const cnMatch = s.match(/(\d{1,2})月(\d{1,2})日?/);
+  if (cnMatch) {
+    let y = today.getFullYear();
+    let m = parseInt(cnMatch[1]) - 1;
+    let d = parseInt(cnMatch[2]);
+    const dt = new Date(y, m, d);
+    if (dt < today) dt.setFullYear(y + 1);
+    return dt.toISOString().split('T')[0];
+  }
+  // 纯数字日期 5-18, 05-18
+  const numMatch = s.match(/^(\d{1,2})-(\d{1,2})$/);
+  if (numMatch) {
+    let y = today.getFullYear();
+    let m = parseInt(numMatch[1]) - 1;
+    let d = parseInt(numMatch[2]);
+    const dt = new Date(y, m, d);
+    if (dt < today) dt.setFullYear(y + 1);
+    return dt.toISOString().split('T')[0];
+  }
+  return null;
+}
+
+function diffDays(dateStr) {
+  if (!dateStr) return 999;
+  const target = new Date(dateStr);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.ceil((target - today) / 86400000);
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '未设置';
+  const d = new Date(dateStr);
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+// ========== 步骤切换 ==========
+function showStep(n) {
+  for (let i = 1; i <= 6; i++) {
+    document.getElementById('stepCard' + i).style.display = 'none';
+    const stepEl = document.getElementById('step' + i);
+    stepEl.classList.remove('active', 'done');
+    if (i < n) stepEl.classList.add('done');
+    if (i === n) stepEl.classList.add('active');
+  }
+  if (n <= 6) {
+    document.getElementById('stepCard' + n).style.display = 'block';
+    document.getElementById('stepCard' + n).scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  currentStep = n;
+}
+
+function skipStep(n) {
+  if (n < 6) showStep(n + 1);
+  else buildSummary();
+}
+
+// ========== 解析函数 ==========
+function parseCourses(text) {
+  const results = [];
+  const lines = text.split('\n').filter(l => l.trim());
+  // 匹配模式：周X + 课程名 + (节次) + (地点)
+  const dayMap = { '一':1,'二':2,'三':3,'四':4,'五':5,'六':6,'日':7,'天':7 };
+  const slotMap = {
+    '1-2':'第1-2节','2-3':'第1-2节','第1':'第1-2节',
+    '3-4':'第3-4节','第3':'第3-4节',
+    '5-6':'第5-6节','第5':'第5-6节',
+    '7-8':'第7-8节','第7':'第7-8节',
+    '9-10':'第9-10节(晚)','第9':'第9-10节(晚)'
+  };
+
+  lines.forEach(line => {
+    // 提取星期
+    let day = null;
+    const dayMatch = line.match(/周[一二三四五六日天]|星期[一二三四五六日天]|[周上课](\d)/);
+    if (dayMatch) {
+      const d = dayMatch[0];
+      if (d.startsWith('周') && dayMap[d[1]] !== undefined) day = dayMap[d[1]];
+      else if (d.startsWith('星期') && dayMap[d[2]] !== undefined) day = dayMap[d[2]];
+      else if (/^\d$/.test(d)) day = parseInt(d);
+    }
+
+    // 提取课程名（去掉星期、时间后的第一串文字）
+    let courseName = '';
+    const cleanLine = line.replace(/周[一二三四五六日天]|星期[一二三四五六日天]|\d{1,2}月\d{1,2}日|第\d{1,2}[-\d]*节|[一二三四五]舍/g, '').trim();
+    const words = cleanLine.split(/\s+/);
+    for (const w of words) {
+      if (w && !/^\d/.test(w) && w.length > 1) {
+        courseName = w; break;
+      }
+    }
+
+    // 提取节次
+    let slot = '第1-2节';
+    const slotMatch = line.match(/第?(\d)[-–]?(\d)节|第(\d)节/);
+    if (slotMatch) {
+      slot = `第${slotMatch[1] || slotMatch[3]}-${slotMatch[2] || slotMatch[3]}节`;
+    }
+
+    // 提取地点
+    let room = '';
+    const roomMatch = line.match(/(教学|外语|体育|实验|理学|文综|理综|[一二三四五]舍)\S{0,8}/);
+    if (roomMatch) room = roomMatch[0];
+
+    if (courseName) {
+      results.push({ name: courseName, day: day || 1, slot, room, status: day ? 'ok' : 'warn' });
+    }
+  });
+  return results;
+}
+
+function parseHomework(text) {
+  const results = [];
+  const lines = text.split('\n').filter(l => l.trim());
+  lines.forEach(line => {
+    // 分离名称和日期
+    const dateMatch = line.match(/(?:截止?|deadline|截至?|交|要交)[：:\s]*([^\d]*\S)/);
+    let name = line;
+    let dateStr = '';
+
+    // 尝试从行末提取日期
+    const endDateMatch = line.match(/(\d{1,2}月\d{1,2}日|明天，后?天|\d{4}-\d{2}-\d{2}|\d{1,2}-\d{1,2})/);
+    if (endDateMatch) {
+      dateStr = endDateMatch[1];
+      name = line.replace(dateStr, '').trim();
+    }
+    if (dateMatch) dateStr = dateMatch[1];
+
+    const date = normalizeDate(dateStr || line);
+    if (name.trim().length > 0) {
+      const days = diffDays(date);
+      let status = 'ok';
+      if (days <= 0) status = 'danger';
+      else if (days <= 3) status = 'warn';
+      results.push({ name: name.trim(), course: '待识别', due: date, days, status });
+    }
+  });
+  return results;
+}
+
+function parseExams(text) {
+  const results = [];
+  const lines = text.split('\n').filter(l => l.trim());
+  const typeKeywords = {
+    'cet4': ['四级', 'CET4', '英语四级'],
+    'cet6': ['六级', 'CET6', '英语六级'],
+    'kaoyan': ['考研'],
+    'final': ['期末'],
+    'teacher': ['教资', '教师资格'],
+    'other': []
+  };
+
+  lines.forEach(line => {
+    let type = 'other';
+    for (const [t, kws] of Object.entries(typeKeywords)) {
+      if (kws.some(k => line.includes(k))) { type = t; break; }
+    }
+    let dateStr = '';
+    const dateMatch = line.match(/(\d{1,2}月\d{1,2}日|\d{4}-\d{2}-\d{2}|\d{1,2}-\d{1,2})/);
+    if (dateMatch) dateStr = dateMatch[1];
+    const name = line.replace(/\d{1,2}月\d{1,2}日|\d{4}-\d{2}-\d{2}|\d{1,2}-\d{1,2}/g, '').trim().replace(/[,，.。]+$/, '');
+    const date = normalizeDate(dateStr || line);
+    if (name) {
+      const days = diffDays(date);
+      results.push({ name, type, date, days, status: days <= 7 ? 'warn' : 'ok' });
+    }
+  });
+  return results;
+}
+
+function parseExpress(text) {
+  const results = [];
+  const lines = text.split('\n').filter(l => l.trim());
+  const typeMap = {
+    '顺丰': '顺丰', 'sf': '顺丰', 'SF': '顺丰',
+    '京东': '京东', 'jd': '京东', 'JD': '京东',
+    '菜鸟': '菜鸟驿站', '驿站': '菜鸟驿站',
+    '圆通': '圆通', 'yt': '圆通', 'YTO': '圆通',
+    '中通': '中通', '申通': '申通', '韵达': '韵达',
+    '邮政': '邮政EMS', 'ems': '邮政EMS'
+  };
+
+  lines.forEach(line => {
+    let no = '', type = '其他', loc = '';
+    // 快递单号：纯数字或SF/JD/YT等开头
+    const noMatch = line.match(/([A-Za-z]{2,3}?\d{8,20})/);
+    if (noMatch) no = noMatch[1].toUpperCase();
+    // 类型
+    for (const [k, v] of Object.entries(typeMap)) {
+      if (line.includes(k)) { type = v; break; }
+    }
+    if (line.includes('菜鸟')) loc = '菜鸟驿站';
+    // 默认到达时间（假设3天内）
+    const today = new Date(); const est = new Date(today); est.setDate(est.getDate() + 3);
+    results.push({ no: no || type, type, date: est.toISOString().split('T')[0], loc, status: 'ok' });
+  });
+  return results;
+}
+
+function parseBalances(text) {
+  const results = [];
+  const lines = text.split('\n').filter(l => l.trim());
+  const typeMap = ['校园卡', '电费', '水费', '网费', '话费等'];
+  lines.forEach(line => {
+    let type = '校园卡', amount = 0, threshold = 10;
+    for (const t of typeMap) { if (line.includes(t)) { type = t; break; } }
+    const amtMatch = line.match(/(?:余额|剩余|当前)[^0-9]*(\d+(?:\.\d+)?)/);
+    if (amtMatch) amount = parseFloat(amtMatch[1]);
+    const thMatch = line.match(/低[于以下](\d+(?:\.\d+)?)元/);
+    if (thMatch) threshold = parseFloat(thMatch[1]);
+    if (amount > 0) {
+      results.push({ type, amount, threshold, status: amount <= threshold ? 'warn' : 'ok' });
+    }
+  });
+  return results;
+}
+
+// ========== 渲染解析结果 ==========
+function renderParseResult(targetId, results, emptyMsg) {
+  const el = document.getElementById(targetId);
+  if (results.length === 0) {
+    el.innerHTML = `<div class="parse-item">
+      <div class="parse-icon">⚠️</div>
+      <div class="parse-content">
+        <div class="parse-title">${emptyMsg}</div>
+      </div>
+      <div class="parse-status skip">未填写</div>
+    </div>`;
+    return;
+  }
+  el.innerHTML = results.map(r => {
+    let icon = '✅', title = '', meta = '';
+    if (r.type === 'course' || r.name) { title = r.name; meta = r.due ? `截止：${formatDate(r.due)}（${diffDays(r.due)}天后）` : r.slot ? `${r.day} · ${r.slot}` : ''; }
+    else if (r.name) { title = r.name; meta = r.due ? `${formatDate(r.due)}` : ''; }
+    else if (r.no) { title = r.no; meta = r.type; }
+    else if (r.amount !== undefined) { title = `${r.type} ¥${r.amount}`; meta = `预警线 ¥${r.threshold}`; }
+    const status = r.status === 'ok' ? 'ok' : r.status === 'warn' ? 'warn' : 'skip';
+    const statusText = status === 'ok' ? '已解析' : status === 'warn' ? '⚠️ 紧急' : '跳过';
+    return `<div class="parse-item">
+      <div class="parse-icon">${icon}</div>
+      <div class="parse-content">
+        <div class="parse-title">${title}</div>
+        <div class="parse-meta">${meta}</div>
+      </div>
+      <div class="parse-status ${status}">${statusText}</div>
+    </div>`;
+  }).join('');
+}
+
+// ========== 图片处理 ==========
+let currentImgFile = null;
+
+function handleImgSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+
+  currentImgFile = file;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    document.getElementById('imgPreview').src = e.target.result;
+    document.getElementById('imgPreviewContainer').style.display = 'block';
+    document.getElementById('ocrResultBox').style.display = 'none';
+    document.getElementById('ocrLoading').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearImg() {
+  currentImgFile = null;
+  document.getElementById('imgFileInput').value = '';
+  document.getElementById('imgPreviewContainer').style.display = 'none';
+  document.getElementById('ocrResultBox').style.display = 'none';
+  document.getElementById('ocrLoading').style.display = 'none';
+}
+
+async function startOCR() {
+  if (!currentImgFile) return;
+
+  const loadingEl = document.getElementById('ocrLoading');
+  const resultBox = document.getElementById('ocrResultBox');
+  const resultContent = document.getElementById('ocrResultContent');
+  const ocrBtn = document.getElementById('ocrBtn');
+
+  loadingEl.style.display = 'flex';
+  resultBox.style.display = 'none';
+  ocrBtn.disabled = true;
+  ocrBtn.innerHTML = '⏳ 识别中...';
+
+  try {
+    // 动态加载Tesseract.js
+    if (typeof Tesseract === 'undefined') {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+      document.head.appendChild(script);
+      await new Promise((resolve, reject) => {
+        script.onload = resolve;
+        script.onerror = reject;
+        setTimeout(reject, 30000); // 30秒超时
+      });
+    }
+
+    const result = await Tesseract.recognize(currentImgFile, 'eng+chi', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          ocrBtn.innerHTML = `⏳ 识别中 ${Math.round(m.progress * 100)}%`;
+        }
+      }
+    });
+
+    const recognizedText = result.data.text.trim();
+    resultContent.textContent = recognizedText;
+
+    // 将识别结果填入文本框
+    document.getElementById('input1').value = recognizedText;
+
+    // 解析识别的课程
+    const courses = parseCourses(recognizedText);
+    if (courses.length > 0) {
+      parsed.courses = courses;
+      resultContent.textContent = recognizedText + '\n\n✅ 已自动解析 ' + courses.length + ' 条课程信息！';
+    }
+
+    loadingEl.style.display = 'none';
+    resultBox.style.display = 'block';
+    ocrBtn.innerHTML = '🤖 AI 识别课程';
+
+    // 自动继续解析
+    setTimeout(() => {
+      parseStep1();
+    }, 1500);
+
+  } catch (error) {
+    console.error('OCR Error:', error);
+    loadingEl.style.display = 'none';
+    resultBox.style.display = 'block';
+    resultContent.textContent = '❌ 识别失败，请尝试：\n1. 确保图片清晰\n2. 尝试截图课表主体部分\n3. 或直接手动输入课程信息';
+  }
+
+  ocrBtn.disabled = false;
+}
+
+// ========== 各步骤处理 ==========
+function parseStep1() {
+  const text = document.getElementById('input1').value;
+  parsed.courses = parseCourses(text);
+  renderParseResult('result1', parsed.courses.map(c => ({...c, type:'course'})), '未输入课程表');
+  setTimeout(() => showStep(2), 1200);
+}
+
+function parseStep2() {
+  const text = document.getElementById('input2').value;
+  parsed.homeworks = parseHomework(text);
+  renderParseResult('result2', parsed.homeworks, '未输入作业');
+  setTimeout(() => showStep(3), 1200);
+}
+
+function parseStep3() {
+  const text = document.getElementById('input3').value;
+  parsed.exams = parseExams(text);
+  renderParseResult('result3', parsed.exams, '未输入考试');
+  setTimeout(() => showStep(4), 1200);
+}
+
+function parseStep4() {
+  const text = document.getElementById('input4').value;
+  parsed.expresses = parseExpress(text);
+  renderParseResult('result4', parsed.expresses, '未输入快递');
+  setTimeout(() => showStep(5), 1200);
+}
+
+function parseStep5() {
+  const text = document.getElementById('input5').value;
+  parsed.balances = parseBalances(text);
+  renderParseResult('result5', parsed.balances, '未设置余额预警');
+  setTimeout(() => { showStep(6); buildSummary(); }, 1200);
+}
+
+// ========== 汇总生成 ==========
+function buildSummary() {
+  const box = document.getElementById('summaryBox');
+  const dayNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  const today = new Date().getDay() || 7;
+
+  let html = '';
+
+  // 课程表
+  if (parsed.courses.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">📚 课程表</div>';
+    parsed.courses.forEach(c => {
+      const isToday = c.day === today;
+      html += `<div class="summary-item ${isToday ? '' : ''}">${dayNames[c.day-1]} · ${c.name} · ${c.slot} ${c.room ? '· ' + c.room : ''} ${isToday ? '【今日】' : ''}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 作业
+  if (parsed.homeworks.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">📝 作业倒计时</div>';
+    parsed.homeworks.sort((a,b) => (a.days||999) - (b.days||999));
+    parsed.homeworks.forEach(h => {
+      const cls = h.days <= 0 ? 'danger' : h.days <= 3 ? 'warning' : '';
+      const tag = h.days <= 0 ? '⚠️已到期' : h.days === 1 ? '🔴明天' : h.days <= 3 ? `🟡${h.days}天后` : `🟢${h.days}天后`;
+      html += `<div class="summary-item ${cls}">${h.name}（${h.course}）${tag} · ${formatDate(h.due)}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 考试
+  if (parsed.exams.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">📖 考试倒计时</div>';
+    parsed.exams.sort((a,b) => (a.days||999) - (b.days||999));
+    parsed.exams.forEach(e => {
+      html += `<div class="summary-item ${e.days <= 7 ? 'warning' : ''}">${e.name} · ${formatDate(e.date)} · 倒计时${e.days}天</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 快递
+  if (parsed.expresses.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">📦 快递提醒</div>';
+    parsed.expresses.forEach(ex => {
+      html += `<div class="summary-item">${ex.no} · ${ex.type} ${ex.loc ? '· '+ex.loc : ''}</div>`;
+    });
+    html += '</div>';
+  }
+
+  // 余额
+  if (parsed.balances.length > 0) {
+    html += '<div class="summary-section"><div class="summary-section-title">💰 余额预警</div>';
+    parsed.balances.forEach(b => {
+      html += `<div class="summary-item ${b.status === 'warn' ? 'warning' : ''}">${b.type} · 余额¥${b.amount} · 预警线¥${b.threshold}</div>`;
+    });
+    html += '</div>';
+  }
+
+  if (html === '') {
+    html = '<div style="text-align:center;padding:40px;color:var(--color-text-light)">暂无数据，请返回填写</div>';
+  }
+
+  box.innerHTML = html;
+  // 标记步骤6为完成
+  for (let i = 1; i <= 6; i++) document.getElementById('step' + i).classList.add('done');
+}
+
+// ========== 固定格式输出 ==========
+function buildFixedOutput() {
+  const dayNames = ['周日','周一','周二','周三','周四','周五','周六'];
+  const today = new Date().getDay() || 7;
+
+  // 今日课程
+  const todayCourses = parsed.courses.filter(c => c.day === today);
+  let courseInfo = '今日无课';
+  if (todayCourses.length > 0) {
+    courseInfo = todayCourses.map(c => `${c.name}(${c.slot})${c.room?' '+c.room:''}`).join('、');
+  }
+
+  // 作业
+  let hwInfo = '暂无待完成作业';
+  if (parsed.homeworks.length > 0) {
+    hwInfo = parsed.homeworks.slice(0,3).map(h => {
+      const tag = h.days <= 0 ? '⚠️已到期' : h.days === 1 ? '🔴明天截止' : h.days <= 3 ? `🟡${h.days}天后截止` : `🟢${h.days}天后截止`;
+      return `${h.name}（${h.course}）${tag}`;
+    }).join('；');
+  }
+
+  // 考试
+  let examInfo = '暂无近期考试';
+  if (parsed.exams.length > 0) {
+    examInfo = parsed.exams.slice(0,3).map(e => `${e.name}倒计时${e.days}天`).join('；');
+  }
+
+  // 快递
+  let expressInfo = '暂无待取快递';
+  if (parsed.expresses.length > 0) {
+    expressInfo = parsed.expresses.map(ex => `${ex.type}(${ex.no})${ex.loc?'在'+ex.loc:''}`).join('、');
+  }
+
+  // 余额
+  let balanceInfo = '余额充足，无预警';
+  if (parsed.balances.length > 0) {
+    const warns = parsed.balances.filter(b => b.status === 'warn');
+    if (warns.length > 0) {
+      balanceInfo = warns.map(b => `⚠️${b.type}余额¥${b.amount}（低于¥${b.threshold}预警线）`).join('；');
+    }
+  }
+
+  // 今日待办
+  const todoItems = [];
+  if (todayCourses.length > 0) todoItems.push(`${todayCourses.length}节课程`);
+  const todayHw = parsed.homeworks.filter(h => h.days === 0);
+  if (todayHw.length > 0) todoItems.push(`⚠️${todayHw.length}项作业今日截止`);
+  if (parsed.expresses.length > 0) todoItems.push(`📦${parsed.expresses.length}件快递`);
+  const warnB = parsed.balances.filter(b => b.status === 'warn');
+  if (warnB.length > 0) todoItems.push(`💰${warnB.length}个账户余额不足`);
+  const todoInfo = todoItems.length > 0 ? todoItems.join('、') : '今日事项已全部完成，继续加油！🎉';
+
+  return `【校园全能提醒小助手】\n📅 今日课表：${courseInfo}\n📝 作业倒计时：${hwInfo}\n📚 考试倒计时：${examInfo}\n📦 快递提醒：${expressInfo}\n💰 余额预警：${balanceInfo}\n✅ 今日待办：${todoInfo}`;
+}
+
+function copySummary() {
+  const text = buildFixedOutput();
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ 已复制！';
+    setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+  });
+}
+
+// 启动时显示第一步
+showStep(1);
+</script>
+</body>
+</html>

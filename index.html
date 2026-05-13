@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园全能提醒小助手</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: linear-gradient(135deg, #4A90D9 0%, #6BA3E0 50%, #FF6B35 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.container {
+  background: white;
+  border-radius: 24px;
+  padding: 40px;
+  max-width: 500px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+h1 {
+  font-size: 24px;
+  color: #2C3E50;
+  margin-bottom: 8px;
+}
+.subtitle {
+  color: #7F8C8D;
+  font-size: 14px;
+  margin-bottom: 30px;
+}
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.card {
+  display: block;
+  padding: 20px;
+  border-radius: 16px;
+  text-decoration: none;
+  transition: all 0.3s;
+  border: 2px solid #F0F4F8;
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 30px rgba(74, 144, 217, 0.2);
+}
+.card-main { background: #E8F4FD; border-color: #4A90D9; }
+.card-main:hover { background: #D0E8FA; }
+.card-ai { background: #FEF9E7; border-color: #F39C12; }
+.card-ai:hover { background: #FEF3D0; }
+.card-auto { background: #F3F9EC; border-color: #27AE60; }
+.card-auto:hover { background: #E8F6E0; }
+.card-icon { font-size: 32px; margin-bottom: 8px; }
+.card-title { font-size: 18px; font-weight: 700; color: #2C3E50; margin-bottom: 4px; }
+.card-desc { font-size: 13px; color: #7F8C8D; }
+.footer {
+  margin-top: 24px;
+  font-size: 12px;
+  color: #B0BEC5;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏫 校园全能提醒小助手</h1>
+  <p class="subtitle">5大校园痛点 · 1键汇总 · 轻松管理大学生活</p>
+  
+  <div class="cards">
+    <a href="widget1.html" class="card card-main">
+      <div class="card-icon">📋</div>
+      <div class="card-title">主助手</div>
+      <div class="card-desc">6模块标签页，查看和管理所有提醒</div>
+    </a>
+    
+    <a href="widget2.html" class="card card-ai">
+      <div class="card-icon">🤖</div>
+      <div class="card-title">AI 录入节点</div>
+      <div class="card-desc">上传课表图片AI识别 · 粘贴文字智能解析</div>
+    </a>
+    
+    <a href="widget3.html" class="card card-auto">
+      <div class="card-icon">⚡</div>
+      <div class="card-title">自动处理节点</div>
+      <div class="card-desc">6大规则自动运行，今日待办汇总</div>
+    </a>
+  </div>
+  
+  <div class="footer">
+    专为全校大学生打造 · 零门槛开箱即用
+  </div>
+</div>
+</body>
+</html>
